@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from asyncio import Queue, create_task
 
-from model.NSNP import NumericalSNPSystem
-from middleware.nsnp_validation import NSNPSchema
+from app.model.NSNP import NumericalSNPSystem
+from app.middleware.nsnp_validation import NSNPSchema
 
 app = FastAPI()
 
