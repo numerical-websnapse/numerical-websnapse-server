@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from asyncio import Queue, create_task
@@ -11,14 +11,15 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:8080",
+    "http://127.0.0.1",
 ]
 
 app.add_middleware(
     CORSMiddleware,
+    allow_credentials=True,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
 )
 
 class ConnectionManager:
@@ -48,7 +49,7 @@ class ConnectionManager:
         schema = NSNPSchema()
         system = NumericalSNPSystem(schema.load(message.get('NSNP')))
         self.active_connections[client_id]['system'] = system
-        system.simulate()
+        system.simulate(branch='initial')
         await self.send(client_id, system.get_state_graph())
 
     async def next(self, client_id: str, message: dict):
@@ -106,10 +107,24 @@ class ConnectionManager:
         
 manager = ConnectionManager()
 
+@app.post("/matrices/{client_id}")
+async def matrices(client_id: str, message: Request):
+    data = await message.json()
+    try:
+        client = manager.active_connections[client_id]
+        system = client['system']
+        config = data.get('config')
+        matrices = system.get_config_matrices(config)
+        return matrices
+    except Exception as e:
+        return {'error': str(e)}
+
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     await manager.connect(websocket, client_id)
+    print(f'Client {client_id} connected')
     message_queue = Queue()
+    
     try:
         receive_task = create_task(manager.receive(client_id, message_queue))
         while True:

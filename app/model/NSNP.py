@@ -211,6 +211,10 @@ class NumericalSNPSystem:
 			placed_funcs += len(self.reg_neurons[neuron]['prf'])
 
 	def get_smatrix(self,config,branch=None):
+		if branch == 'initial':
+			spike = self.compute_random_spike(config)
+			return np.tile(np.array(spike, dtype=float), (1, 1))
+
 		active_count, active = self.compute_active_functions(config)
 		comb_count = np.prod(active_count, where = active_count > 0)
 		spiking_mx = np.zeros((int(comb_count), len(self.functions)))
@@ -396,7 +400,7 @@ class NumericalSNPSystem:
 		key = tuple(config)
 
 		if config not in self.explored_states:
-			self.simulate_single(config)
+			self.simulate_single(config, 'initial')
 
 		node = self.state_graph['nodes'][key]
 
