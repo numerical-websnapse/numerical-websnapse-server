@@ -50,6 +50,7 @@ class ConnectionManager:
         system = NumericalSNPSystem(schema.load(message.get('NSNP')))
         self.active_connections[client_id]['system'] = system
         system.simulate(branch='initial')
+        print('successfully generated intital configuration')
         await self.send(client_id, system.get_state_graph())
 
     async def next(self, client_id: str, message: dict):

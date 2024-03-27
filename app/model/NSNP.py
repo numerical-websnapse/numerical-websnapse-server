@@ -1,6 +1,4 @@
-import json
-import random
-import numpy as np
+import json, random, time, numpy as np
 from pprint import pprint
 from copy import deepcopy
 
@@ -105,7 +103,7 @@ class NumericalSNPSystem:
 				if self.check_threshold(config,index_i) and function:
 					active[index_i, index_j] = 1
 					active_count[index_j] += 1
-		
+				
 		if format == 'array':
 			return (active_count, [1 if 1 in function else 0 for function in active])
 		
@@ -159,8 +157,10 @@ class NumericalSNPSystem:
 		
 		mapped = 0
 		for index, neuron in enumerate(self.reg_neurons):
-			for index_j, var in enumerate(self.reg_neurons[neuron]['prf']):
-				self.var_to_func[index_j+mapped] += self.neuron_to_var[index]
+			for index_j, prf in enumerate(self.reg_neurons[neuron]['prf']):
+				for index_k, var in enumerate(self.neuron_to_var[index]):
+					if prf[2][index_k][1] != 0:
+						self.var_to_func[index_j+mapped].append(var)
 			mapped += len(self.reg_neurons[neuron]['prf'])
 
 	def map_func_to_out(self):
@@ -296,10 +296,11 @@ class NumericalSNPSystem:
 			
 			depth = depth + 1
 
-	def simulate_single(self,config,branch=None):
+	def simulate_single(self,config,branch=None,spike=None):
 		next_states = []
 
-		S = self.get_smatrix(np.array(config),branch)
+		S = self.get_smatrix(np.array(config),branch) if spike is None else\
+			np.tile(np.array(spike, dtype=float), (1, 1))
 		P, E = self.get_pmatrix(np.array(config))
 		V = self.get_vmatrix(S,np.array(config))
 		ENG = np.matmul(S,E)
@@ -384,9 +385,18 @@ class NumericalSNPSystem:
 
 	def compute_random_spike(self,config):
 		active_count, active = self.compute_active_functions(config)
+		
+		# if config in self.explored_states:
+		# 	key = tuple(config)
+		# 	comb_count = np.prod(active_count, where = active_count > 0)
+		# 	spike_count = len(self.state_graph['nodes'][key]['spike'])
+		# 	if(comb_count == spike_count):
+		# 		return self.state_graph['nodes'][key]['spike'][
+		# 			random.randint(0,comb_count-1)
+		# 		]
 
-		spike = [0 for _ in range(len(self.functions))]
-		for index_m, neuron in enumerate(self.reg_neurons):
+		spike = np.zeros(len(self.functions), dtype=int)
+		for index_m in range(len(self.reg_neurons)):
 			if active_count[index_m] == 0:
 				continue
 			
@@ -394,18 +404,18 @@ class NumericalSNPSystem:
 			index_n = random.choice(functions)
 			spike[index_n] = 1
 
-		return spike
+		return spike.tolist()
 
 	def next(self, config, spike=None):
 		key = tuple(config)
-
-		if config not in self.explored_states:
-			self.simulate_single(config, 'initial')
-
-		node = self.state_graph['nodes'][key]
-
+		
 		if spike is None:
 			spike = self.compute_random_spike(config)
+		
+		if config not in self.explored_states:
+			self.simulate_single(config, 'initial', spike)
+
+		node = self.state_graph['nodes'][key]
 		
 		if spike not in node['spike']:
 			self.add_spike(config, node, spike)
@@ -446,21 +456,45 @@ class NumericalSNPSystem:
 # 		0 1 0 1 0 1
 
 if __name__ == '__main__':
-	from middleware.nsnp_validation import NSNPSchema
+	import os
+	import sys
 
-	with open('tests/subset-15-80-api.json', 'r') as f:
+	current_dir = os.path.dirname(os.path.abspath(__file__))
+	parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+	parent_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
+	sys.path.append(parent_dir)
+
+	from app.middleware.nsnp_validation import NSNPSchema
+
+	with open('app/tests/chain/all-chain-500-loop.json', 'r') as f:
 		data = json.load(f)
 
 	schema = NSNPSchema()
-	NSNP = NumericalSNPSystem(schema.load(data['NSNP']))
-	# NSNP.simulate(data['branch'],data['cur_depth'],data['sim_depth'])
-	# print(NSNP.get_state_graph()['nodes'])
-	pprint(NSNP.next([
-		4.0, 4.0, 6.0, 4.0, 10.0, 7.0, 1.0, 1.0, 2.0, 1.0, 3.0, 10.0, 9.0, 5.0, 9.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0, 0.0
-	])) # subset-15-80-api.json
-	# pprint(NSNP.next([
-	# 	5.0, 4.0, 4.0, 7.0, 1.0, 4.0, 5.0, 7.0, 6.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0
-	# ])) # subset-10-20-api.json
-	# pprint(NSNP.next([1.0, 1.0, 2.0])) #NSNP_G6_1
-	# pprint(NSNP.next([1.0, 1.0, 2.0],[1,0,1,0])) #NSNP_G6_1
-	# pprint(NSNP.next([1.0],[1.0])) #NSNP_G6_3
+	system = NumericalSNPSystem(
+        schema.load({
+            'neurons' : data['nodes'],
+            'syn' : data['edges']
+        })
+    )
+
+	# Initial simulation
+	start = time.time()
+	system.simulate(branch='initial')
+	end = time.time()
+
+	elapsed_time = end - start
+	print(elapsed_time)
+
+	# Get next config
+	state_graph = system.get_state_graph()
+	initial_config = state_graph['nodes'][0]
+	next_config = initial_config['next'][0]
+	
+	for i in range(5):
+		start = time.time()
+		config_details = system.next(next_config, None)
+		end = time.time()
+
+		next_config = config_details['next']
+		elapsed_time = end - start
+		print(elapsed_time)
