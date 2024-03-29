@@ -121,7 +121,7 @@ class NumericalSNPSystem:
 	# map_neuron_to_var() - Get the mapping of neurons to variables
 	# map_neuron_to_neuron() - Get the mapping of neurons to neurons (synapses)
 	# map_func_to_var() - Get the mapping of functions to variables (production)
-	# map_func_contains_var() - Get the mapping of variables to functions
+	# map_func_contains_var() - Get the mapping of variables to functions (function uses variable)
 	#===========================================================================
 	def map_neuron_to_var(self):
 		self.neuron_to_var = dict(); 

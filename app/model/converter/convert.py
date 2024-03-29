@@ -22,8 +22,17 @@ def convert_to_nsnapse(data):
     )
 
     VL = []
-    for v2f_mapping in system.var_to_func:
-        for v in system.var_to_func[v2f_mapping]:
+    v2f_map = {index:[] for index in range(len(system.functions))}
+    mapped = 0
+    for index, neuron in enumerate(system.reg_neurons):
+        for index_j, prf in enumerate(system.reg_neurons[neuron]['prf']):
+            for index_k, var in enumerate(system.neuron_to_var[index]):
+                v2f_map[index_j+mapped].append(var)
+                    
+        mapped += len(system.reg_neurons[neuron]['prf'])
+
+    for v2f_mapping in v2f_map:
+        for v in v2f_map[v2f_mapping]:
             VL.append(v2f_mapping + 1)
 
     T = []
@@ -59,7 +68,7 @@ def convert_to_nsnapse(data):
     new_data = {
         'C'         : system.config_mx[0].astype(int).tolist(),
         'VL'        : VL,
-        'F'         : system.function_mx.astype(int).tolist(),
+        'F'         : system.function_mx.astype(float).tolist(),
         'L'         : system.f_location_mx.astype(int).tolist(),
         'T'         : T,
         'syn'       : S,
@@ -75,7 +84,7 @@ def convert_to_nsnapse(data):
 
 if __name__ == '__main__':
     import glob
-    files = glob.glob(f"app\\tests\\*\\*.json")
+    files = glob.glob(f"app\\tests\\custom\\*.json")
 
     for file in files:
 

@@ -62,7 +62,8 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
     }
 
 
-n = [n for n in range(50, 550, 50)]
+# n = [n for n in range(50, 550, 50)]
+n = [n for n in range(10,50,10)]
 r = generate_radius(n)
 circles = circle_points(r, n)
 
@@ -87,8 +88,3 @@ for i, circle in enumerate(circles):
     data = generate_data(circle.tolist(), data_template=data_template)
     with open(f'app/tests/complete/benchmark-complete-{n[i]}.json', 'w') as f:
         json.dump(data, f)
-
-
-
-
-
