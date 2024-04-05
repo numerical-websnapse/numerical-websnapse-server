@@ -353,7 +353,11 @@ class NumericalSNPSystem:
 	def get_config_matrices(self,config):
 		key = tuple(config)
 		node = self.state_graph['nodes'][key]
-		return node['matrices']
+		matrices = deepcopy(node['matrices'])
+		matrices['S'] = node['spike']
+		matrices['F'] = self.function_mx.tolist()
+		matrices['L'] = self.f_location_mx.tolist()
+		return matrices
 	
 	#===========================================================================
 	# Configuration manager (used by the API)

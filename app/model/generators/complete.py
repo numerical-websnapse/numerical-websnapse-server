@@ -27,8 +27,8 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
             'data': {
                 'label' : '\\sigma_{%s}'%(i),
                 'ntype' : 'reg',
-                'var_'  : [['x_{(1,1)}', '1']],
-                'prf'   : [['f_{(1,1)}', '', [['x_{(1,1)}', '1']]]],
+                'var_'  : [['x_1', '1']],
+                'prf'   : [['f_1', '', [['x_1', '1']]]],
                 'train' : [],
                 'x'     : pos[0],
                 'y'     : pos[1],
@@ -62,8 +62,8 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
     }
 
 
-# n = [n for n in range(50, 550, 50)]
-n = [n for n in range(10,50,10)]
+n = [n for n in range(50, 550, 50)]
+# n = [n for n in range(10,50,10)]
 r = generate_radius(n)
 circles = circle_points(r, n)
 
@@ -75,13 +75,13 @@ for i, circle in enumerate(circles):
     
     data_template = {
         'var_' : [
-            ['x_{(1,1)}', '1'],
-            ['x_{(2,1)}', '1']
+            ['x_1', '1'],
+            ['x_2', '1']
         ],
         'prf' : [
-            ['f_{(1,1)}', '', [['x_{(1,1)}', '1'],['x_{(2,1)}', '1']]],
-            ['f_{(2,1)}', '', [['x_{(1,1)}', '1'],['x_{(2,1)}', '0']]],
-            ['f_{(3,1)}', '', [['x_{(1,1)}', '0'],['x_{(2,1)}', '0']]]
+            ['f_1', '', [['x_1', '1'],['x_2', '1']]],
+            ['f_2', '', [['x_1', '1'],['x_2', '0']]],
+            ['f_3', '', [['x_1', '0'],['x_2', '0']]]
         ]
     }
 

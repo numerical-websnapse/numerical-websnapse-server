@@ -3,6 +3,7 @@ from pprint import pprint
 import json, string
 
 import numpy as np
+import math
 
 def circle_points(r, n):
     circles = []
@@ -12,6 +13,27 @@ def circle_points(r, n):
         y = r * np.sin(t)
         circles.append(np.c_[x, y])
     return circles
+
+def grid_points(n):
+    grids = []
+    for ni in n:
+        rows = math.ceil(math.sqrt(ni))
+        cols = math.ceil(ni/rows)
+        x = np.linspace(0, 1, cols) * rows * 200
+        y = np.linspace(0, 1, rows) * cols * 200
+        xv, yv = np.meshgrid(x, y)
+        grid = np.c_[xv.ravel(), yv.ravel()]
+        grids.append(grid[0:ni])
+
+    return grids
+
+def line_points(n):
+    lines = []
+    for ni in n:
+        x = np.linspace(0, 800, ni)
+        y = np.zeros(ni)
+        lines.append(np.c_[x, y])
+    return lines
 
 def id_generator(size=6, chars=string.ascii_lowercase + string.digits):
     return ''.join(choice(chars) for _ in range(size))
@@ -27,8 +49,8 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
             'data': {
                 'label' : '\\sigma_{%s}'%(i),
                 'ntype' : 'reg',
-                'var_'  : [['x_{(1,2)}', '0']] if type == 'one' and i != 0 else [['x_{(1,2)}', '1']],
-                'prf'   : [['f_{(1,2)}', '1', [['x_{(1,2)}', '1']]]],
+                'var_'  : [['x_{1}', '0']] if type == 'one' and i != 0 else [['x_{1}', '1']],
+                'prf'   : [['f_{1}', '1', [['x_{1}', '1']]]],
                 'train' : [],
                 'x'     : pos[0],
                 'y'     : pos[1],
@@ -42,10 +64,27 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
                 'y'     : pos[1],
             }
         })
+    
+    last_pos = positions[-1]
+    x_offset = positions[1][0] - positions[0][0]
+    y_offset = positions[1][1] - positions[0][1]
+
+    nodes.append({
+        'id': id_generator(8),
+        'data': {
+            'label' : 'out',
+            'ntype' : 'out',
+            'var_'  : [],
+            'prf'   : [],
+            'train' : [],
+            'x'     : last_pos[0] + x_offset,
+            'y'     : last_pos[1] + y_offset,
+        }
+    })
 
     edges = []
     for i in range(len(nodes)):
-        if(i == len(nodes) - 1 and not loop):
+        if (i == len(nodes) - 1 and not loop) or nodes[i]['data']['ntype'] == 'out':
             break
 
         j = (i+1)%len(nodes)
@@ -64,24 +103,24 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
     }
 
 
-n = [n for n in range(50,1050,50)]
+n = [4]
 r = generate_radius(n)
-circles = circle_points(r, n)
+points = grid_points(n) #circle_points(r, n)
 
-for i, circle in enumerate(circles):
-    data = generate_data(circle.tolist())
+for i, point in enumerate(points):
+    data = generate_data(point.tolist())
     with open(f'app/tests/chain/one-chain-{n[i]}.json', 'w') as f:
         json.dump(data, f)
 
-    data = generate_data(circle.tolist(), type='all')
+    data = generate_data(point.tolist(), type='all')
     with open(f'app/tests/chain/all-chain-{n[i]}.json', 'w') as f:
         json.dump(data, f)
 
-    data = generate_data(circle.tolist(), type='all', loop=True)
+    data = generate_data(point.tolist(), type='all', loop=True)
     with open(f'app/tests/chain/one-chain-{n[i]}-loop.json', 'w') as f:
         json.dump(data, f)
 
-    data = generate_data(circle.tolist(), type='all', loop=True)
+    data = generate_data(point.tolist(), type='all', loop=True)
     with open(f'app/tests/chain/all-chain-{n[i]}-loop.json', 'w') as f:
         json.dump(data, f)
 
