@@ -20,20 +20,11 @@ def convert_to_nsnapse(data):
             'syn' : data['edges']
         })
     )
-
+    
     VL = []
-    v2f_map = {index:[] for index in range(len(system.functions))}
-    mapped = 0
-    for index, neuron in enumerate(system.reg_neurons):
-        for index_j, prf in enumerate(system.reg_neurons[neuron]['prf']):
-            for index_k, var in enumerate(system.neuron_to_var[index]):
-                v2f_map[index_j+mapped].append(var)
-                    
-        mapped += len(system.reg_neurons[neuron]['prf'])
-
-    for v2f_mapping in v2f_map:
-        for v in v2f_map[v2f_mapping]:
-            VL.append(v2f_mapping + 1)
+    for i in system.neuron_to_var:
+        for j in system.neuron_to_var[i]:
+            VL.append(i+1)
 
     T = []
     for i, func in enumerate(system.functions):
@@ -84,7 +75,7 @@ def convert_to_nsnapse(data):
 
 if __name__ == '__main__':
     import glob
-    files = glob.glob(f"app\\tests\\custom\\*.json")
+    files = glob.glob(f"app\\tests\\*\\*.json")
 
     for file in files:
 
