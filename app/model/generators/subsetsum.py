@@ -22,7 +22,7 @@ def generate_subset_sum(n, sum=20):
                 'var_': [['x',str(randint(1, 10))]],
                 'prf': [['f_{1}','',[['x','1']]],['f_{2}','',[['x','-1']]]],
                 'train': [],
-                'ntype': 'reg',
+                'type': 'reg',
                 'label': '\sigma_{{{i}}}'.format(i=i),
                 'x': position['x'],
                 'y': position['y'] * i,
@@ -37,7 +37,7 @@ def generate_subset_sum(n, sum=20):
                 'var_': [['x','0']],
                 'prf': [['f_{1}','0',[['x','1']]]],
                 'train': [],
-                'ntype': 'reg',
+                'type': 'reg',
                 'label': '\sigma_{{{i}}}'.format(i=n+i),
                 'x': position['x'] * 2,
                 'y': position['y'] * i,
@@ -51,7 +51,7 @@ def generate_subset_sum(n, sum=20):
             'var_': [['x',str(sum+1)]], # x[S + 1]
             'prf': [['f_{1}','',[['x','-1']]]],
             'train': [],
-            'ntype': 'reg',
+            'type': 'reg',
             'label': '\sigma_{{{i}}}'.format(i=n*2),
             'x': position['x'] * 3,
             'y': position['y'] * ((n-1)-2),
@@ -65,7 +65,7 @@ def generate_subset_sum(n, sum=20):
             'var_': [['x','0']], # x[S + 1]
             'prf': [['f_{1}','',[['x','1']]]],
             'train': [],
-            'ntype': 'reg',
+            'type': 'reg',
             'label': '\sigma_{{{i}}}'.format(i=(n*2)+1),
             'x': position['x'] * 3,
             'y': position['y'] * ((n-1)-1),
@@ -79,7 +79,7 @@ def generate_subset_sum(n, sum=20):
             'var_': [['x','0']], # x[S + 1]
             'prf': [['f_{1}','-1',[['x','-1']]]],
             'train': [],
-            'ntype': 'reg',
+            'type': 'reg',
             'label': '\sigma_{{{i}}}'.format(i=(n*2)+2),
             'x': position['x'] * 3,
             'y': position['y'] * ((n-1)-0),
@@ -93,7 +93,7 @@ def generate_subset_sum(n, sum=20):
             'var_': [['x','0']], # x[S + 1]
             'prf': [['f_{1}','1',[['x','1']]]],
             'train': [],
-            'ntype': 'reg',
+            'type': 'reg',
             'label': '\sigma_{{{i}}}'.format(i=(n*2)+3),
             'x': position['x'] * 4,
             'y': position['y'] * ((n-1)-0),
@@ -106,7 +106,7 @@ def generate_subset_sum(n, sum=20):
             'var_': [], # x[S + 1]
             'prf': [],
             'train': [],
-            'ntype': 'out',
+            'type': 'out',
             'label': '\sigma_{{{i}}}'.format(i=(n*2)+4),
             'x': position['x'] * 5,
             'y': position['y'] * ((n-1)-0),

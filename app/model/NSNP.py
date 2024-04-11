@@ -8,12 +8,14 @@ class NumericalSNPSystem:
 		self.synapses = system_description['syn']
 		self.reg_neurons = self.get_reg_neurons()
 		self.out_neurons = self.get_out_neurons()
+		self.in_neurons = self.get_in_neurons()
 
 		# ORDERING SYSTEM DETAILS
 		self.get_nrn_order()
 		self.get_out_order()
 		self.get_var_order()
 		self.get_prf_order()
+		self.get_in_order()
 
 		# INITIAL MATRICES
 		self.get_init_cmatrix()
@@ -26,13 +28,14 @@ class NumericalSNPSystem:
 		self.map_func_to_var()
 		self.map_func_contains_var()
 		self.map_func_to_out()
+		self.map_in_to_var()
 
 		# INITIAL STATE
 		self.unexplored_states = self.config_mx.tolist()
-		self.explored_states = []
 		self.state_graph = {
 			'out_ord' : self.output_keys,
 			'nrn_ord' : self.neuron_keys,
+			'in_ord' : self.input_keys,
 			'nodes': {},
 		}
 		
@@ -48,11 +51,15 @@ class NumericalSNPSystem:
 	#===========================================================================
 	def get_reg_neurons(self):
 		return {neuron['id']:neuron['data']
-		  			for neuron in self.neurons if neuron['data']['ntype'] == 'reg'}
+		  			for neuron in self.neurons if neuron['data']['type'] == 'reg'}
 	
 	def get_out_neurons(self):
 		return {neuron['id']:0
-		  			for neuron in self.neurons if neuron['data']['ntype'] == 'out'}
+		  			for neuron in self.neurons if neuron['data']['type'] == 'out'}
+	
+	def get_in_neurons(self):
+		return {neuron['id']:neuron['data']
+		  			for neuron in self.neurons if neuron['data']['type'] == 'in'}
 
 	#===========================================================================
 	# Get the order of the variables and functions
@@ -79,6 +86,9 @@ class NumericalSNPSystem:
 
 	def get_out_order(self):
 		self.output_keys = [neuron for neuron in self.out_neurons]
+
+	def get_in_order(self):
+		self.input_keys = [neuron for neuron in self.in_neurons]
 
 	#===========================================================================
 	# Helper functions for building the Spiking Matrix
@@ -134,11 +144,17 @@ class NumericalSNPSystem:
 	def map_neuron_to_neuron(self):
 		self.neuron_to_neuron = {index:[] for index in range(len(self.reg_neurons))}
 		self.neuron_to_out = {index:[] for index in range(len(self.reg_neurons))}
+		self.in_to_neuron = {index:[] for index in range(len(self.in_neurons))}
 		
 		for synapse in self.synapses:
 			if synapse['target'] in self.out_neurons:
 				source = self.neuron_keys.index(synapse['source'])
-				self.neuron_to_out[source] += [synapse['target']]
+				target = self.output_keys.index(synapse['target'])
+				self.neuron_to_out[source].append(target)
+			elif synapse['source'] in self.in_neurons:
+				source = self.input_keys.index(synapse['source'])
+				target = self.neuron_keys.index(synapse['target'])
+				self.in_to_neuron[source].append(target)
 			else:
 				source = self.neuron_keys.index(synapse['source'])
 				target = self.neuron_keys.index(synapse['target'])
@@ -171,6 +187,13 @@ class NumericalSNPSystem:
 			for index_j, var in enumerate(self.reg_neurons[neuron]['prf']):
 				self.func_to_out[index_j+mapped] += self.neuron_to_out[index]
 			mapped += len(self.reg_neurons[neuron]['prf'])
+
+	def map_in_to_var(self):
+		self.in_to_var = {index:[] for index in range(len(self.in_neurons))}
+
+		for index, neuron in enumerate(self.in_neurons):
+			for target in self.in_to_neuron[index]:
+				self.in_to_var[index] += self.neuron_to_var[target]
 
 	#===========================================================================
 	# Get the matrices for the NSN P system
@@ -240,7 +263,7 @@ class NumericalSNPSystem:
 			temp_comb_count /= active_count[index_m]
 
 		if branch is None:
-			branch = 1 if len(spiking_mx) > 1 else None
+			branch = 64 if len(spiking_mx) > 64 else None
 		if branch is not None:
 			temp_branch = branch if branch < comb_count else int(comb_count)
 			indices = np.random.choice(\
@@ -262,7 +285,7 @@ class NumericalSNPSystem:
 				production_mx[index_i, index_j] = sum
 
 			for index_j in self.func_to_out[index_i]:
-				environment_mx[index_i, self.output_keys.index(index_j)] = sum
+				environment_mx[index_i, index_j] = sum
 		
 		return production_mx, environment_mx
 
@@ -276,6 +299,88 @@ class NumericalSNPSystem:
 						variable_mx[index_i][variable] = 0
 		
 		return variable_mx
+	
+	def get_ivector(self,depth):
+		input_vc = np.zeros((len(self.in_neurons)))
+		for index_i, input_ in enumerate(self.input_keys):
+			if depth < len(self.in_neurons[input_]['train']):
+				input_vc[index_i] = self.in_neurons[input_]['train'][depth]
+				continue
+
+			input_vc[index_i] = 0
+
+		return input_vc
+	
+	def get_imatrix(self,input_vc):
+		input_mx = np.zeros((len(self.variables)))
+
+		for index_i, neurons in enumerate(input_vc):
+			for index_j, target in enumerate(self.in_to_var[index_i]):
+				input_mx[target] += input_vc[index_i]
+
+		return input_mx
+	
+	def get_inputs_details(self,depth):
+		input_vc = self.get_ivector(depth)
+		input_mx = self.get_imatrix(input_vc)
+
+		return input_vc, input_mx
+	
+	#===========================================================================
+	# Helper functions for simulating the NSN P system
+	#---------------------------------------------------------------------------
+	# should_explore() - Check if the configuration should be explored
+	# add_to_state_graph() - Add/Edit the configuration to/in the state graph
+	#---------------------------------------------------------------------------
+	def should_explore(self, state, inputs, depth, next_states):
+		f_state = (state + inputs).tolist()
+
+		if tuple(f_state) in self.state_graph['nodes']:
+			next_IV = tuple(self.get_ivector(depth + 1))
+			if next_IV not in self.state_graph['nodes'][tuple(f_state)]['in']:
+				next_states.append(f_state)
+
+		elif f_state not in self.unexplored_states + next_states:
+			next_states.append(f_state)
+
+	def add_to_state_graph(self,config,S,P,E,V,IV,IM,ENG,CL):
+		key = tuple(config)
+		
+		# If the configuration is already in the state graph
+		if key in self.state_graph['nodes']:
+			for index, spike in enumerate(S.tolist()):
+				if spike not in self.state_graph['nodes'][key]['spike']:
+					self.state_graph['nodes'][key]['spike'].append(spike)
+					self.state_graph['nodes'][key]['next'].append(CL[index])
+					self.state_graph['nodes'][key]['env'].append(ENG[index].tolist())
+					self.state_graph['nodes'][key]['matrices']['V'].append(V[index].tolist())
+			
+			self.state_graph['nodes'][key]['in'][tuple(IV)] = {
+				'state' : [
+					self.state_graph['nodes'][key]['spike'].index(spike)
+					for spike in S.tolist()
+				],
+				'input' : IM.tolist()
+			}
+
+		# If the configuration is not yet in the state graph
+		else:
+			self.state_graph['nodes'][key] = {
+				'spike': S.tolist(),
+				'env': ENG.tolist(),
+				'next': CL,
+				'in': {
+					tuple(IV) : {
+						'state' : [CL.index(state) for state in CL],
+						'input' : IM,
+					}
+				},
+				'matrices': {
+					'P': P.tolist(),
+					'E': E.tolist(),
+					'V': V.tolist(),
+				}
+			}
 		
 	#===========================================================================
 	# Main algorithm for simulating NSN P Systems
@@ -287,58 +392,52 @@ class NumericalSNPSystem:
 		depth = cur_depth
 		
 		while depth < sim_depth:
-
 			if not self.unexplored_states:
 				break
 
 			for config in deepcopy(self.unexplored_states):
-				self.simulate_single(config, branch)
+				self.simulate_single(config, depth, branch)
 			
 			depth = depth + 1
 
-	def simulate_single(self,config,branch=None,spike=None):
+	def simulate_single(self,config,depth,branch=None,spike=None):
 		next_states = []
 
 		S = self.get_smatrix(np.array(config),branch) if spike is None else\
 			np.tile(np.array(spike, dtype=float), (1, 1))
 		P, E = self.get_pmatrix(np.array(config))
 		V = self.get_vmatrix(S,np.array(config))
+		IV, IM = self.get_inputs_details(depth)
 		ENG = np.matmul(S,E)
 		NG = np.matmul(S,P)
 		C = np.add(NG,V)
+		CL = C.tolist()
 
-		for state in C.tolist():
-					if state not in self.explored_states \
-											+ self.unexplored_states + next_states:
-						next_states.append(state)
+		for state in C:
+			self.should_explore(state, IM, depth, next_states)
 
-		self.state_graph['nodes'][tuple(config)] = {
-			'next': C.tolist(), # list(k for k,_ in itertools.groupby(C.tolist()))
-			'spike': S.tolist(),
-			'env': ENG.tolist(),
-			'matrices': {
-				'P': P.tolist(),
-				'E': E.tolist(),
-				'V': V.tolist(),
-			}
-		}
-
-		if config not in self.explored_states:
-			self.explored_states.append(config)
+		if config in self.unexplored_states:
 			self.unexplored_states.remove(config)
-			self.unexplored_states += next_states
-	
+		self.unexplored_states += next_states
+		
+		self.add_to_state_graph(config,S,P,E,V,IV,IM,ENG,CL)
+		
 	#===========================================================================
 	# Helper functions for formatting the output
 	#---------------------------------------------------------------------------
 	# format_config() - Format the configuration
 	# get_config_details() - Get the details of the configuration
+	# get_config_matrices() - Get the matrices of the configuration
 	#---------------------------------------------------------------------------
-	def format_config(self, node, index):
+	def format_config(self, node, index, depth):
+		next = node['next'][index]
+		IV = self.get_ivector(depth)
+		next = np.array(next) + node['in'][tuple(IV)]['input']
+
 		return {
-			'next': node['next'][index],
+			'next': next.tolist(),
 			'spike': node['spike'][index],
-			'env': node['env'][index]
+			'env': node['env'][index],
 		}
 	
 	def get_config_details(self,config):
@@ -360,30 +459,45 @@ class NumericalSNPSystem:
 		return matrices
 	
 	#===========================================================================
-	# Configuration manager (used by the API)
+	# Configuration Manager (accessible by clients through API)
+	#---------------------------------------------------------------------------
+	# NOTE: The implementation of this only traverses one path at a time
 	#---------------------------------------------------------------------------
 	# next() - Get the next configuration
 	# add_spike() - Add a spike to the node
 	# compute_random_spike() - Compute a random spike
 	# get_active_array() - Get the active array
 	#===========================================================================
-	def add_spike(self, config, node, spike):
+	def add_spike(self, config, depth, node, spike):
+		next_states = []
+		
 		S = np.tile(np.array(spike, dtype=float), (1, 1))
 		P, E = self.get_pmatrix(np.array(config))
 		V = self.get_vmatrix(S,np.array(config))
+		IV, IM = self.get_inputs_details(depth)
 		ENG = np.matmul(S,E)
 		NG = np.matmul(S,P)
 		C = np.add(NG,V)
+		CL = C.tolist()
 
-		next_states = []
-		for state in C.tolist():
-					if state not in self.explored_states \
-											+ self.unexplored_states + next_states:
-						next_states.append(state)
-
-		node['next'] += C.tolist()
+		for state in C:
+			self.should_explore(state, IM, depth, next_states)
+		
 		node['spike'] += S.tolist()
 		node['env'] += ENG.tolist()
+		node['next'] += CL
+		
+		if tuple(IV) not in node['in']:
+			node['in'][tuple(IV)] = {
+				'state' : [len(node['next'])-1],
+				'input' : IM.tolist()
+			}
+		else:
+			node['in'][tuple(IV)]['state'] += [
+				len(node['next'])-1
+			]
+			
+		node['matrices']['V'] += V.tolist()
 
 		self.unexplored_states += next_states
 
@@ -410,22 +524,30 @@ class NumericalSNPSystem:
 
 		return spike.tolist()
 
-	def next(self, config, spike=None):
+	def next(self, config, depth, spike=None):
 		key = tuple(config)
 		
 		if spike is None:
 			spike = self.compute_random_spike(config)
 		
-		if config not in self.explored_states:
-			self.simulate_single(config, 'initial', spike)
+		if key not in self.state_graph['nodes']:
+			self.simulate_single(config, depth, 'initial', spike)
 
 		node = self.state_graph['nodes'][key]
 		
 		if spike not in node['spike']:
-			self.add_spike(config, node, spike)
+			self.add_spike(config, depth, node, spike)
 		
 		index = node['spike'].index(spike)
-		return self.format_config(node, index)
+		IV, IM = self.get_inputs_details(depth)
+
+		if tuple(IV) not in node['in']:
+			node['in'][tuple(IV)] = {
+				'state' : [index],
+				'input' : IM.tolist()
+			}
+
+		return self.format_config(node, index, depth)
 	
 	def get_active_array(self,config):
 		active_count, active = self.compute_active_functions(config,format='array')
@@ -440,8 +562,6 @@ class NumericalSNPSystem:
 
 		return formatted
 	
-	
-
 # ACTIVE FUNCTIONS MATRIX EXAMPLE
 # 		1 | 0 | 0
 # 		1 | 0 | 0
@@ -470,7 +590,8 @@ if __name__ == '__main__':
 
 	from app.middleware.nsnp_validation import NSNPSchema
 
-	with open('app/tests/chain/all-chain-500-loop.json', 'r') as f:
+	# with open('app/tests/custom/sample-from-ballesteros.json', 'r') as f:
+	with open('app/tests/custom/input3.json', 'r') as f:
 		data = json.load(f)
 
 	schema = NSNPSchema()
@@ -481,24 +602,27 @@ if __name__ == '__main__':
         })
     )
 
-	# Initial simulation
-	start = time.time()
-	system.simulate(branch='initial')
-	end = time.time()
+	system.simulate(sim_depth=10)
+	pprint(system.state_graph)
 
-	elapsed_time = end - start
-	print(elapsed_time)
+	# # Initial simulation
+	# start = time.time()
+	# system.simulate(branch='initial')
+	# end = time.time()
 
-	# Get next config
-	state_graph = system.get_state_graph()
-	initial_config = state_graph['nodes'][0]
-	next_config = initial_config['next'][0]
+	# elapsed_time = end - start
+	# print(elapsed_time)
+
+	# # Get next config
+	# state_graph = system.get_state_graph()
+	# initial_config = state_graph['nodes'][0]
+	# next_config = initial_config['next'][0]
 	
-	for i in range(5):
-		start = time.time()
-		config_details = system.next(next_config, None)
-		end = time.time()
+	# for i in range(5):
+	# 	start = time.time()
+	# 	config_details = system.next(next_config, i, None)
+	# 	end = time.time()
 
-		next_config = config_details['next']
-		elapsed_time = end - start
-		print(elapsed_time)
+	# 	next_config = config_details['next']
+	# 	elapsed_time = end - start
+	# 	print(elapsed_time)

@@ -48,7 +48,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
             'id': id_generator(8),
             'data': {
                 'label' : '\\sigma_{%s}'%(i),
-                'ntype' : 'reg',
+                'type' : 'reg',
                 'var_'  : [['x_{1}', '0']] if type == 'one' and i != 0 else [['x_{1}', '1']],
                 'prf'   : [['f_{1}', '1', [['x_{1}', '1']]]],
                 'train' : [],
@@ -56,7 +56,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
                 'y'     : pos[1],
             } if data_template is None else {
                 'label' : '\\sigma_{%s}'%(i),
-                'ntype' : 'reg',
+                'type' : 'reg',
                 'var_'  : data_template['var_'],
                 'prf'   : data_template['prf'],
                 'train' : [],
@@ -73,7 +73,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
         'id': id_generator(8),
         'data': {
             'label' : 'out',
-            'ntype' : 'out',
+            'type' : 'out',
             'var_'  : [],
             'prf'   : [],
             'train' : [],
@@ -83,9 +83,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
     })
 
     edges = []
-    for i in range(len(nodes)):
-        if (i == len(nodes) - 1 and not loop) or nodes[i]['data']['ntype'] == 'out':
-            break
+    for i in range(len(nodes) - 1):
 
         j = (i+1)%len(nodes)
 
@@ -95,7 +93,14 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
             'target': nodes[j]['id'],
             'data'  : {},
         })
-                
+
+    if loop:
+        edges.append({
+            'id': id_generator(12),
+            'source': nodes[-2]['id'],
+            'target': nodes[0]['id'],
+            'data'  : {},
+        })
 
     return {
         'nodes': nodes,
@@ -103,12 +108,12 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
     }
 
 
-n = [4]
+n = [n for n in range(50,1050,50)]
 r = generate_radius(n)
 points = grid_points(n) #circle_points(r, n)
 
 for i, point in enumerate(points):
-    data = generate_data(point.tolist())
+    data = generate_data(point.tolist(), type='one')
     with open(f'app/tests/chain/one-chain-{n[i]}.json', 'w') as f:
         json.dump(data, f)
 
@@ -116,7 +121,7 @@ for i, point in enumerate(points):
     with open(f'app/tests/chain/all-chain-{n[i]}.json', 'w') as f:
         json.dump(data, f)
 
-    data = generate_data(point.tolist(), type='all', loop=True)
+    data = generate_data(point.tolist(), type='one', loop=True)
     with open(f'app/tests/chain/one-chain-{n[i]}-loop.json', 'w') as f:
         json.dump(data, f)
 

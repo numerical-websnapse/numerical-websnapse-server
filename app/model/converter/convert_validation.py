@@ -20,7 +20,7 @@ class NeuronDataSchema(Schema):
 
     var_ = fields.List(fields.List(fields.String()), required=True)
     prf = fields.List(fields.List(fields.Raw(allow_none=True)), required=True)
-    ntype = fields.String(required=True, validate=validate.OneOf(["reg", "out"]))
+    type = fields.String(required=True, validate=validate.OneOf(["reg", "out", "in"]))
     label = fields.String(required=True)
     train = fields.List(fields.Raw())
     x = fields.Float(required=True)

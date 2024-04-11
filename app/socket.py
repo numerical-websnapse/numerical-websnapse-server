@@ -57,7 +57,8 @@ class ConnectionManager:
         system = self.active_connections[client_id]['system']
         config = message.get('config')
         spike = message.get('spike')
-        next = system.next(config, spike)
+        time = message.get('time')
+        next = system.next(config, time, spike=spike)
         await self.send(client_id, next)
 
     async def active(self, client_id: str, message: dict):

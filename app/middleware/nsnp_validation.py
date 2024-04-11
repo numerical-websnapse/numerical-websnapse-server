@@ -31,7 +31,7 @@ class NeuronDataSchema(Schema):
 
     var_ = fields.List(fields.List(fields.String()), required=True)
     prf = fields.List(fields.List(fields.Raw(allow_none=True)), required=True)
-    ntype = fields.String(required=True, validate=validate.OneOf(["reg", "out"]))
+    type = fields.String(required=True, validate=validate.OneOf(["reg", "out", "in"]))
     label = fields.String(required=True)
     train = fields.List(fields.Raw())
     
@@ -68,6 +68,12 @@ class NeuronDataSchema(Schema):
         for i in range(len(data['prf'])):
             for j in range(len(data['prf'][i][2])):
                 data['prf'][i][2][j][1] = string_to_float(data['prf'][i][2][j][1])
+        return data
+    
+    @post_load
+    def convert_train_to_number(self, data, **kwargs):
+        for i in range(len(data['train'])):
+            data['train'][i] = string_to_float(data['train'][i])
         return data
 
 class NeuronSchema(Schema):

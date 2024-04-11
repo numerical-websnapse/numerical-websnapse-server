@@ -26,7 +26,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
             'id': id_generator(8),
             'data': {
                 'label' : '\\sigma_{%s}'%(i),
-                'ntype' : 'reg',
+                'type' : 'reg',
                 'var_'  : [['x_1', '1']],
                 'prf'   : [['f_1', '', [['x_1', '1']]]],
                 'train' : [],
@@ -34,7 +34,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
                 'y'     : pos[1],
             } if data_template is None else {
                 'label' : '\\sigma_{%s}'%(i),
-                'ntype' : 'reg',
+                'type' : 'reg',
                 'var_'  : data_template['var_'],
                 'prf'   : data_template['prf'],
                 'train' : [],
@@ -62,7 +62,7 @@ def generate_data(positions, type = 'one', loop = False, data_template = None):
     }
 
 
-n = [n for n in range(50,550,50)]
+n = [n for n in range(50,550,50)] + [n for n in range(10,50,10)] + [64]
 # n = [n for n in range(10,50,10)]
 r = generate_radius(n)
 circles = circle_points(r, n)
