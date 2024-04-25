@@ -305,9 +305,9 @@ class NumericalSNPSystem:
 		for index_i, input_ in enumerate(self.input_keys):
 			if depth < len(self.in_neurons[input_]['train']):
 				input_vc[index_i] = self.in_neurons[input_]['train'][depth]
-				continue
+			# 	continue
 
-			input_vc[index_i] = 0
+			# input_vc[index_i] = 0
 
 		return input_vc
 	
