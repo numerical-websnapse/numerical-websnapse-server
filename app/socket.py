@@ -4,6 +4,8 @@ from fastapi.responses import HTMLResponse
 from asyncio import Queue, create_task
 
 from app.model.NSNP import NumericalSNPSystem
+from app.model.converter.converter import convert_to_nsnapse
+from app.model.converter.convert_validation import NSNPSchema as ConvertSchema
 from app.middleware.nsnp_validation import NSNPSchema
 
 app = FastAPI()
@@ -108,6 +110,22 @@ class ConnectionManager:
         await websocket.send_json(message)
         
 manager = ConnectionManager()
+
+@app.post("/convert")
+async def convert(message: Request):
+    data = await message.json()
+    try:
+        schema = ConvertSchema()
+        system = NumericalSNPSystem(
+            schema.load({
+                'neurons' : data.get('nodes'),
+                'syn' : data.get('edges'),
+            })
+        )
+        output = convert_to_nsnapse(system)
+        return output
+    except Exception as e:
+        return {'error': str(e)}
 
 @app.post("/matrices/{client_id}")
 async def matrices(client_id: str, message: Request):

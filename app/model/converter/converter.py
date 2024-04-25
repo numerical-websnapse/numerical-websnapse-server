@@ -1,26 +1,11 @@
 import os, sys, time
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-parent_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
-parent_dir = os.path.abspath(os.path.join(parent_dir, os.pardir))
-sys.path.append(parent_dir)
-
 from app.model.NSNP import NumericalSNPSystem
-from convert_validation import NSNPSchema
+from app.model.converter.convert_validation import NSNPSchema
 from pprint import pprint
 import json, glob
 
-
-def convert_to_nsnapse(data):
-    schema = NSNPSchema()
-    system = NumericalSNPSystem(
-        schema.load({
-            'neurons' : data['nodes'],
-            'syn' : data['edges']
-        })
-    )
-    
+def convert_to_nsnapse(system: NumericalSNPSystem):
     VL = []
     for i in system.neuron_to_var:
         for j in system.neuron_to_var[i]:
@@ -84,9 +69,20 @@ if __name__ == '__main__':
 
         start_time = time.time()
         new_path = file.replace('tests', 'tests\\converted')
+        
         with open(file, 'r') as f:
-            data = convert_to_nsnapse(json.load(f))
+            data = json.load(f)
+
+            schema = NSNPSchema()
+            system = NumericalSNPSystem(
+                schema.load({
+                    'neurons' : data['nodes'],
+                    'syn' : data['edges']
+                })
+            )
+
+            output = convert_to_nsnapse(system)
             with open(new_path, 'w') as f:
-                json.dump(data, f)
+                json.dump(output, f)
 
         print(f"{file:50} - \t{time.time() - start_time}s")
