@@ -1,0 +1,1 @@
+{"C": [1, 0], "VL": [1, 2], "F": [[2.0, 0.0], [0.0, 2.0]], "L": [[1, 0], [0, 1]], "T": [], "syn": [[1, 2], [2, 1]], "envSyn": 2, "neuronPositions": [{"id": "Neuron 1", "position": {"x": 0.0, "y": 0.0}}, {"id": "neuron-contents0", "position": {"x": 0.0, "y": 0.0}}, {"id": "Neuron 2", "position": {"x": 0.0, "y": 0.0}}, {"id": "neuron-contents1", "position": {"x": 0.0, "y": 0.0}}]}

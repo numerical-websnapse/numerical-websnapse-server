@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 .vercel
 
-app/tests/
+# app/tests/

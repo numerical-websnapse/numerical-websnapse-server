@@ -1,0 +1,101 @@
+{
+    "nodes": [{
+        "id": "in_1",
+        "data": {
+            "label": "in_1",
+            "type": "in",
+            "var_": [],
+            "prf": [],
+            "train": [1,2,4,8,16],
+            "x": 0.0,
+            "y": 0.0
+        }
+    },{
+        "id": "in_2",
+        "data": {
+            "label": "in_2",
+            "type": "in",
+            "var_": [],
+            "prf": [],
+            "train": [1,3,9,27,81],
+            "x": 0.0,
+            "y": 0.0
+        }
+    },{
+        "id": "n_1",
+        "data": {
+            "label": "n_1",
+            "type": "reg",
+            "var_": [
+                ["x_{1}", "1"]
+            ],
+            "prf": [
+                ["f_{1}", "", [
+                    ["x_{1}", "2"]
+                ]]
+            ],
+            "train": [],
+            "x": 0.0,
+            "y": 0.0
+        }
+    },{
+        "id": "n_2",
+        "data": {
+            "label": "n_2",
+            "type": "reg",
+            "var_": [
+                ["x_{1}", "0"]
+            ],
+            "prf": [
+                ["f_{1}", "", [
+                    ["x_{1}", "2"]
+                ]]
+            ],
+            "train": [],
+            "x": 0.0,
+            "y": 0.0
+        }
+    },{
+        "id": "out",
+        "data": {
+            "label": "out",
+            "type": "out",
+            "var_": [],
+            "prf": [],
+            "train": [],
+            "x": 1066.6666666666667,
+            "y": 0.0
+        }
+    }],
+    "edges": [{
+        "id": "e1",
+        "source": "in_1",
+        "target": "n_1",
+        "data": {}
+    },{
+        "id": "e2",
+        "source": "in_2",
+        "target": "n_2",
+        "data": {}
+    },{
+        "id": "e3",
+        "source": "n_1",
+        "target": "n_2",
+        "data": {}
+    },{
+        "id": "e4",
+        "source": "n_2",
+        "target": "n_1",
+        "data": {}
+    },{
+        "id": "e5",
+        "source": "n_1",
+        "target": "out",
+        "data": {}
+    },{
+        "id": "e6",
+        "source": "n_2",
+        "target": "out",
+        "data": {}
+    }]
+}
